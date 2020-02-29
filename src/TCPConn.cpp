@@ -297,8 +297,7 @@ void TCPConn::waitForSID() {
 
 void TCPConn::firstReply() {
    if (_connfd.hasData()) {
-
-      std::cout << "In firstReply()." << std::endl; 
+      //std::cout << "In firstReply()." << std::endl; 
 
       std::vector<uint8_t> buf;
 
@@ -340,7 +339,7 @@ void TCPConn::firstReply() {
 
 void TCPConn::secondReply() {
    if (_connfd.hasData()) {
-      std::cout << "In finalCheck()." << std::endl; 
+      //std::cout << "In secondReply()." << std::endl; 
 
       std::vector<uint8_t> buf;
 
@@ -373,7 +372,7 @@ void TCPConn::secondReply() {
       wrapCmd(buf, c_auth, c_endauth);
       sendEncryptedData(buf);
 
-      _status = s_datatx;
+      _status = s_datarx;
    }
 }
 
@@ -386,7 +385,7 @@ void TCPConn::secondReply() {
 
 void TCPConn::finalCheck() {
    if (_connfd.hasData()) {
-      std::cout << "In finalCheck()." << std::endl; 
+      //std::cout << "In finalCheck()." << std::endl; 
 
       std::vector<uint8_t> buf;
 
@@ -419,7 +418,7 @@ void TCPConn::finalCheck() {
       wrapCmd(buf, c_auth, c_endauth);
       sendEncryptedData(buf);
 
-      _status = s_datarx;
+      _status = s_datatx;
    }
 }
 
