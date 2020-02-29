@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
       throw std::runtime_error("Unable to create simulator thread");
 
    // Start the replication server
-   ReplServer repl_server(db, ip_addr.c_str(), port, time_mult, verbosity); 
+   ReplServer repl_server(db, ip_addr.c_str(), port, sim.getOffset(), time_mult, verbosity); 
 
    pthread_t replthread;
    std::cout << "Launching replication server thread thread." << std::endl; 
