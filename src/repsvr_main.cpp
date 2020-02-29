@@ -169,6 +169,7 @@ int main(int argc, char *argv[]) {
 
    // Launch the thread
    pthread_t simthread;
+   std::cout << "Launching attena sim thread." << std::endl; 
    if (pthread_create(&simthread, NULL, t_simulator, (void *) &sim) != 0)
       throw std::runtime_error("Unable to create simulator thread");
 
@@ -176,6 +177,7 @@ int main(int argc, char *argv[]) {
    ReplServer repl_server(db, ip_addr.c_str(), port, time_mult, verbosity); 
 
    pthread_t replthread;
+   std::cout << "Launching replication server thread thread." << std::endl; 
    if (pthread_create(&replthread, NULL, t_replserver, (void *) &repl_server) != 0)
       throw std::runtime_error("Unable to create replication server thread");
 

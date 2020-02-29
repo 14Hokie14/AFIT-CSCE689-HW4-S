@@ -16,7 +16,8 @@ public:
    ~TCPConn();
 
    // The current status of the connection
-   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata };
+   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_chal1, s_reply1, s_reply2, s_check };
+
 
    statustype getStatus() { return _status; };
 
@@ -76,6 +77,10 @@ protected:
    void waitForData();
    void awaitAck();
 
+   void firstReply();
+   void secondReply();
+   void finalCheck();
+
    // Looks for commands in the data stream
    std::vector<uint8_t>::iterator findCmd(std::vector<uint8_t> &buf,
                                                    std::vector<uint8_t> &cmd);
@@ -88,6 +93,9 @@ protected:
    // Places startcmd and endcmd strings around the data in buf and returns it in buf
    void wrapCmd(std::vector<uint8_t> &buf, std::vector<uint8_t> &startcmd,
                                                     std::vector<uint8_t> &endcmd);
+
+   // Generates a random string to send for authentication
+   char genRandomChar(); 
 
 
 private:
@@ -116,6 +124,8 @@ private:
    unsigned int _verbosity;
 
    LogMgr &_server_log;
+
+   char auth1, auth2; // Used in auth functionality 
 };
 
 
