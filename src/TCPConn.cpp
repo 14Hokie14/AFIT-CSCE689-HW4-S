@@ -72,6 +72,15 @@ TCPConn::TCPConn(LogMgr &server_log, CryptoPP::SecByteBlock &key, unsigned int v
 
    c_endsid = c_sid;
    c_endsid.insert(c_endsid.begin()+1, 1, slash);
+
+   c_elec.push_back((uint8_t) '<');
+   c_elec.push_back((uint8_t) 'E');
+   c_elec.push_back((uint8_t) 'L');
+   c_elec.push_back((uint8_t) 'E');
+   c_elec.push_back((uint8_t) '>');
+
+   c_elecend = c_elec; 
+   c_elecend.insert(c_elecend.begin()+1, 1, slash);
 }
 
 

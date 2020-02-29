@@ -63,6 +63,16 @@ private:
    // Used to bind the server
    std::string _ip_addr;
    unsigned short _port;
+
+   // Holds an election of all of the servers in server.txt and sets offsets
+   void holdElection();
+
+   // The offset for this server, set in the election, only used in the antenna sim
+   // add plot call, add this value to the time
+   int server_offset = 0; 
+
+   //Used by the replservers to determine their offsets. 
+   std::string offsetFile = "offset.txt";
 };
 
 
