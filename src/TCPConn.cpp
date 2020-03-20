@@ -72,14 +72,14 @@ TCPConn::TCPConn(LogMgr &server_log, CryptoPP::SecByteBlock &key, unsigned int v
    c_endsid.insert(c_endsid.begin()+1, 1, slash);
 
    // I don't know if this is ever used, if it's not used then remove
-   c_elec.push_back((uint8_t) '<');
-   c_elec.push_back((uint8_t) 'E');
-   c_elec.push_back((uint8_t) 'L');
-   c_elec.push_back((uint8_t) 'E');
-   c_elec.push_back((uint8_t) '>');
+   c_data.push_back((uint8_t) '<');
+   c_data.push_back((uint8_t) 'D');
+   c_data.push_back((uint8_t) 'A');
+   c_data.push_back((uint8_t) 'T');
+   c_data.push_back((uint8_t) '>');
 
-   c_elecend = c_elec; 
-   c_elecend.insert(c_elecend.begin()+1, 1, slash);
+   c_enddata = c_data; 
+   c_enddata.insert(c_enddata.begin()+1, 1, slash);
 }
 
 
@@ -425,7 +425,7 @@ void TCPConn::finalCheck() {
          return;
       }
 
-      std::cout << "In finalCheck(), auth check passed" << std::endl;
+      //std::cout << "In finalCheck(), auth check passed" << std::endl;
 
       // Save the challenge big in auth2 to reassign it to the buffer
       //auth2 = buf[1];
@@ -482,7 +482,9 @@ void TCPConn::transmitData() {
    }
    **/
   // Send the replication data
-   sendData(_outputbuf);
+   wrapCmd(_outputbuf, c_rep, c_endrep);
+   sendEncryptedData(_outputbuf);
+
 
    if (_verbosity >= 3)
       std::cout << "Successfully authenticated connection and sending replication data.\n";
@@ -506,7 +508,7 @@ void TCPConn::waitForData() {
    if (_connfd.hasData()) {
       std::vector<uint8_t> buf;
 
-      if (!getData(buf))
+      if (!getEncryptedData(buf))
          return;
 
       if (!getCmdData(buf, c_rep, c_endrep)) {
