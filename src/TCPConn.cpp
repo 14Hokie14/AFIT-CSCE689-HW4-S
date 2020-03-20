@@ -447,15 +447,19 @@ void TCPConn::finalCheck() {
  **********************************************************************************************/
 
 void TCPConn::transmitData() {
-
+   /**
    // If data on the socket, should be our Auth string from our host server
    if (_connfd.hasData()) {
+      std::cout << "Do we get here???" << std::endl;
       std::vector<uint8_t> buf;
 
-      if (!getData(buf))
+      if (!getData(buf)){
+         std::cout << "BEING HERE IS BAD111" << std::endl;
          return;
+      }  
 
       if (!getCmdData(buf, c_sid, c_endsid)) {
+         std::cout << "BEING HERE IS BAD" << std::endl;
          std::stringstream msg;
          msg << "SID string from connected server invalid format. Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
@@ -476,6 +480,16 @@ void TCPConn::transmitData() {
       // Wait for their response
       _status = s_waitack;
    }
+   **/
+  // Send the replication data
+   sendData(_outputbuf);
+
+   if (_verbosity >= 3)
+      std::cout << "Successfully authenticated connection and sending replication data.\n";
+
+   // Wait for their response
+   _status = s_waitack;
+
 }
 
 
