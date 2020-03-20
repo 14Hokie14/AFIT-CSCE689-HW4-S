@@ -110,7 +110,10 @@ void ReplServer::replicate() {
       }       
 
       usleep(1000);
-   }   
+   }
+
+   // Don't forget the eventual consistency call!
+   eventual_consistency();   
 }
 
 /**********************************************************************************************
@@ -227,10 +230,111 @@ void ReplServer::shutdown() {
    _shutdown = true;
 }
 
-
 /**
- * 
- */
-void ReplServer::holdElection(){
-   return; 
+ * Call this at the end of replicate.  This will remove duplicates and 
+ * fix all of the offsets, making them relative to the highest node id.  
+ **/ 
+void ReplServer::eventual_consistency(){
+   std::cout << "calling eventual_consistency" << std::endl;
+   // Sort the list at the begining to make the logic easier:
+   _plotdb.sortByTime();
+
+   // First figure out how many nodes we have
+   std::vector<unsigned int> tracker;
+   std::cout << "get_node_count" << std::endl;
+   get_node_count(tracker); // tracker now contains all the node ids
+   std::sort(tracker.begin(), tracker.end()); // Arrange values in ascending order
+
+   // Now we will generate the offsets and delete the duplicates
+   std::vector<int> offsets; // vector to hold the offsets
+   std::cout << "generate_offsets" << std::endl;
+   generate_offsets(offsets, tracker);
+
+   // Now we can go through and fix the time stamps
+   std::cout << "correct_timestamps" << std::endl;
+   correct_timestamps(offsets, tracker);
+}
+
+// Itterate through the database and add unique nodes to the tracker vector
+void ReplServer::get_node_count(std::vector<unsigned int> &tracker){
+   auto dbitr = _plotdb.begin(); // Iterator set up
+
+   // Now we are going to loop through every node in the DB and check to see if it 
+   // is in tracker. If it is not add it.
+   for ( ; dbitr != _plotdb.end(); dbitr++) {
+      if (!std::count(tracker.begin(), tracker.end(), dbitr->node_id)){
+         tracker.push_back(dbitr->node_id);
+      } 
+   }
+}
+
+// Generate the offsets with the highest node id being the "true" time
+void ReplServer::generate_offsets(std::vector<int> &offsets, std::vector<unsigned int> &tracker){
+   // Get the value of the largest node id
+   unsigned int largest_id = tracker[tracker.size()-1];
+   
+   // This loop will happen once for each node id in tracker
+   for(unsigned int node_id:tracker){
+      // If we are on the last node just break
+      if(node_id == largest_id){
+         break; // we are done
+      }
+      // Add the offset to offsets, offset_aux also deletes the duplicate node
+      offsets.push_back(offset_aux(node_id, largest_id));
+   }
+   
+}
+
+// Auxillary fuction to unclutter the generate offsets function
+int ReplServer::offset_aux(unsigned int input_id, unsigned int largest_id){
+   std::cout << "calling offset_aux" << std::endl;
+   int offset = 0; 
+
+   
+   auto dbitr = _plotdb.begin(); 
+   auto dbitr2 = _plotdb.begin();
+   // Iterate over the plotdb 
+   for ( ; dbitr != _plotdb.end(); dbitr++) {
+      // if this is the node we are looking to set up the offset for
+      if(dbitr->node_id == input_id){
+         // now we are going to loop through the DB starting where we currently are
+         dbitr2 = dbitr; 
+         dbitr2++; // point it to the next plot
+         for ( ; dbitr2 != _plotdb.end(); dbitr2++) {
+            if(dbitr2->latitude == dbitr->latitude && dbitr2->longitude == dbitr->longitude && dbitr2->node_id == largest_id){
+               // at this point dbitr2 is pointing at a node that is a dubplicate of the node dbitr is pointing at
+               // but with the node id of largest_id
+               offset = dbitr2->timestamp - dbitr->timestamp;
+               // also since we have an iterator at a duplicate we can just call erase now too!
+               _plotdb.erase(dbitr2);
+               return offset;
+            }
+
+         }
+      }
+   }
+   return offset; 
+}
+
+// Uses the offsets and tracker vectors to iterate through the DB and correct the timestamps
+void ReplServer::correct_timestamps(std::vector<int> &offsets, std::vector<unsigned int> &tracker){
+   // Get the value of the largest node id
+   unsigned int largest_id = tracker[tracker.size()-1];
+
+   // Iterate over the plotdb 
+   int i = 0; 
+   auto dbitr = _plotdb.begin(); 
+   for ( ; dbitr != _plotdb.end(); dbitr++) {
+      if(dbitr->node_id != largest_id){
+         // Get the index of the node in tracker
+         i = 0; 
+         for(unsigned int n:tracker){
+            if(dbitr->node_id == n){
+               break;
+            }
+            i++;
+         }
+         dbitr->timestamp = dbitr->timestamp + offsets[i];
+      }
+   }
 }

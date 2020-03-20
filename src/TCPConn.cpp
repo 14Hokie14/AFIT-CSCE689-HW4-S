@@ -13,8 +13,6 @@
 #include <crypto++/rijndael.h>
 #include <crypto++/gcm.h>
 #include <crypto++/aes.h>
-#include <stdlib.h>
-#include <ctime>
 
 using namespace CryptoPP;
 
@@ -73,6 +71,7 @@ TCPConn::TCPConn(LogMgr &server_log, CryptoPP::SecByteBlock &key, unsigned int v
    c_endsid = c_sid;
    c_endsid.insert(c_endsid.begin()+1, 1, slash);
 
+   // I don't know if this is ever used, if it's not used then remove
    c_elec.push_back((uint8_t) '<');
    c_elec.push_back((uint8_t) 'E');
    c_elec.push_back((uint8_t) 'L');
@@ -176,11 +175,6 @@ void TCPConn::encryptData(std::vector<uint8_t> &buf) {
  *                    handling it based on the _status, or stage, of the connection
  *
  *    Throws: runtime_error for unrecoverable issues
- * 
- * To handle authentication I added flags and now the sending server will go through the
- * following states: s_connecting, s_reply1, s_check.  The recieveing server will go 
- * through the following states: s_chal1, s_reply2.  In each of these processes the encryption
- * will be sent on the s_reply states. 
  **********************************************************************************************/
 
 void TCPConn::handleConnection() {
@@ -212,6 +206,11 @@ void TCPConn::handleConnection() {
          // Check the second challenge, disconnect if it doesn't check out
          case s_check:
             finalCheck();
+            break;
+
+         // Server: Wait for the SID from a newly-connected client, then send our SID
+         case s_connected:
+            waitForSID();
             break;
    
          // Client: connecting user - replicate data
@@ -292,7 +291,7 @@ void TCPConn::waitForSID() {
       buf.assign(1, auth1);
       wrapCmd(buf, c_auth, c_endauth);
       sendData(buf);
-
+      std::cout << "in waitforSID()" << std::endl;
       _status = s_reply2;
    }
 }
@@ -327,10 +326,14 @@ void TCPConn::firstReply() {
       // Set up auth2, do need to save this
       auth2 = genRandomChar();
 
-      // Buff is currently just the char from the client, just push auth2 on the back of it
+      buf.clear();
+      buf.push_back(auth1);
       buf.push_back(auth2);
 
-      // Send our challenge
+      // Buff is currently just the char from the client, just push auth2 on the back of it
+      //buf.push_back(auth2);
+
+      // Set up the buf with the auth tags then send the buf
       wrapCmd(buf, c_auth, c_endauth);
       sendEncryptedData(buf);
 
@@ -348,15 +351,17 @@ void TCPConn::firstReply() {
 
 void TCPConn::secondReply() {
    if (_connfd.hasData()) {
-      //std::cout << "In secondReply()." << std::endl; 
+      std::cout << "In secondReply()." << std::endl; 
 
       std::vector<uint8_t> buf;
 
-      if (!getEncryptedData(buf))
+      if (!getEncryptedData(buf)){
          return;
+      }
 
       // Check the message tags
       if (!getCmdData(buf, c_auth, c_endauth)) {
+         std::cout << "failure In secondReply() from getCmdData." << std::endl;
          std::stringstream msg;
          msg << "Challenge bits from connecting client invalid format in firstReply(). Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
@@ -366,6 +371,7 @@ void TCPConn::secondReply() {
 
       // Check to see if the first char in the buff was what we had saved in auth1 (it should be)
       if(auth1 != buf[0]){
+         std::cout << "failure In secondReply() auth check." << std::endl;
          std::stringstream msg;
          msg << "Challenge bits from connecting client invalid in finalCheck(). Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
@@ -413,19 +419,21 @@ void TCPConn::finalCheck() {
       // Check to see if the first char in the buff was what we had saved in auth1 (it should be)
       if(auth2 != buf[0]){
          std::stringstream msg;
-         msg << "Challenge bits from connecting client invalid in secondReply(). Cannot authenticate.";
+         msg << "Challenge bits from connecting client invalid in finalCheck(). Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
          disconnect();
          return;
       }
 
+      std::cout << "In finalCheck(), auth check passed" << std::endl;
+
       // Save the challenge big in auth2 to reassign it to the buffer
-      auth2 = buf[1];
-      buf.assign(1, auth2);
+      //auth2 = buf[1];
+      //buf.assign(1, auth2);
 
       // Send our challenge
-      wrapCmd(buf, c_auth, c_endauth);
-      sendEncryptedData(buf);
+      //wrapCmd(buf, c_auth, c_endauth);
+      //sendEncryptedData(buf);
 
       _status = s_datatx;
    }
@@ -790,7 +798,6 @@ const char *TCPConn::getIPAddrStr(std::string &buf) {
    _connfd.getIPAddrStr(buf);
    return buf.c_str();
 }
-
 
 /** 
  * Generates a random character, to be used for creating random bits to send for authentication

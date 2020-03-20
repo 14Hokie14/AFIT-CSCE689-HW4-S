@@ -64,15 +64,24 @@ private:
    std::string _ip_addr;
    unsigned short _port;
 
-   // Holds an election of all of the servers in server.txt and sets offsets
-   void holdElection();
+   // Don't worry about consistency until the servers have fully run their course. The
+   // reasoning behind is that lets say we have 3 nodes and you don't actually get any 
+   // data points on the last node unitl the very last tick of the day (session, whatever)
+   // so we are just going to make sure the data store at the very end is consistent. 
+   // We will make the largest node the true time and change the offsets based on that.  
+   void eventual_consistency();
 
-   // The offset for this server, set in the election, only used in the antenna sim
-   // add plot call, add this value to the time
-   int server_offset = 0; 
+   // Itterate through the database and add unique nodes to the tracker vector
+   void get_node_count(std::vector<unsigned int> &tracker);
 
-   //Used by the replservers to determine their offsets. 
-   std::string offsetFile = "offset.txt";
+   // Generate the offsets with the highest node id being the "true" time
+   void generate_offsets(std::vector<int> &offsets, std::vector<unsigned int> &tracker);
+
+   // Generate offset auxillary function
+   int offset_aux(unsigned int node_id, unsigned int largest_id);
+
+   // loop through the database and correct the timestamps
+   void correct_timestamps(std::vector<int> &offsets, std::vector<unsigned int> &tracker);
 };
 
 

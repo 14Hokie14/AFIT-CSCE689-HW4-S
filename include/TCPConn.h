@@ -18,7 +18,6 @@ public:
    // The current status of the connection
    enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_chal1, s_reply1, s_reply2, s_check};
 
-
    statustype getStatus() { return _status; };
 
    bool accept(SocketFD &server);
@@ -96,7 +95,6 @@ protected:
 
    // Generates a random string to send for authentication
    char genRandomChar(); 
-
 
 private:
 
